@@ -1,5 +1,5 @@
 {
-  "name": "dimple",
+  "name": "@izberg/dimple",
   "version": "2.2.0",
   "private": false,
   "licenses": [
@@ -30,7 +30,25 @@
     "grunt-contrib-connect": "~0.3.0",
     "grunt-contrib-copy": "~0.7.0"
   },
-  "buildDependencies": {
-      "d3": "3.4.8"
-  }
+  "dependencies": {
+    "d3": "3.4.8"
+  },
+  "description": "Dimple is an object-oriented API allowing you to create flexible axis-based charts using [d3.js](http://d3js.org \"d3.js\").",
+  "directories": {
+    "example": "examples",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/izberg-marketplace/dimple.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/izberg-marketplace/dimple/issues"
+  },
+  "homepage": "https://github.com/izberg-marketplace/dimple#readme"
 }
