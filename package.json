@@ -30,7 +30,7 @@
     "karma-script-launcher": "~0.1.0",
     "requirejs": "~2.1.10"
   },
-  "dependencies": {
+  "buildDependencies": {
     "d3": "4.0.0"
   },
   "description": "Dimple is an object-oriented API allowing you to create flexible axis-based charts using [d3.js](http://d3js.org \"d3.js\").",
