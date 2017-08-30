@@ -1,24 +1,37 @@
 {
-    "name": "dimple",
-    "version": "3.0.0",
-    "private": false,
-    "license": "MIT",
-    "main": "dist/dimple.latest.js",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/PMSI-AlignAlytics/dimple.git"
-    },
-    "devDependencies": {
-        "requirejs": "2.3.2",
-        "express": "4.14.0",
-        "grunt": "1.0.1",
-        "grunt-jslint": "1.1.14",
-        "grunt-contrib-concat": "1.0.1",
-        "grunt-contrib-uglify": "2.0.0",
-        "grunt-contrib-connect": "1.0.2",
-        "grunt-contrib-copy": "1.0.0"
-    },
-    "buildDependencies": {
-        "d3": "4.3.0"
-    }
+  "name": "@izberg/dimple",
+  "version": "3.0.0",
+  "private": false,
+  "license": "MIT",
+  "main": "dist/dimple.latest.js",
+  "devDependencies": {
+    "requirejs": "2.3.2",
+    "express": "4.14.0",
+    "grunt": "1.0.1",
+    "grunt-jslint": "1.1.14",
+    "grunt-contrib-concat": "1.0.1",
+    "grunt-contrib-uglify": "2.0.0",
+    "grunt-contrib-connect": "1.0.2",
+    "grunt-contrib-copy": "1.0.0"
+  },
+  "buildDependencies": {
+    "d3": "4.3.0"
+  },
+  "description": "Dimple is an object-oriented API allowing you to create flexible axis-based charts using [d3.js](http://d3js.org \"d3.js\").",
+  "directories": {
+    "example": "examples",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/izberg-marketplace/dimple.git"
+  },
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/izberg-marketplace/dimple/issues"
+  },
+  "homepage": "https://github.com/izberg-marketplace/dimple#readme"
 }
