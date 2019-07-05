@@ -28,6 +28,7 @@
                 key,
                 keyString,
                 rowIndex,
+                entered,
                 updated,
                 removed,
                 orderedSeriesArray,
@@ -60,10 +61,11 @@
                     return parseFloat(val.toFixed(1));
                 },
                 getLine = function (inter, originProperty) {
-                    return d3.svg.line()
+                    var pt = d3.line()
                         .x(function (d) { return (series.x._hasCategories() || !originProperty ? d.x : series.x[originProperty]); })
-                        .y(function (d) { return (series.y._hasCategories() || !originProperty ? d.y : series.y[originProperty]); })
-                        .interpolate(inter);
+                        .y(function (d) { return (series.y._hasCategories() || !originProperty ? d.y : series.y[originProperty]); });
+                    dimple._interpolate(pt, inter);
+                    return pt;
                 };
 
             // Handle the special interpolation handling for step
@@ -176,18 +178,18 @@
                 lineData[i].css = chart.getClass(lineData[i].key.length > 0 ? lineData[i].key[lineData[i].key.length - 1] : "All");
             }
 
-            if (chart._tooltipGroup !== null && chart._tooltipGroup !== undefined) {
+            if (chart._tooltipGroup) {
                 chart._tooltipGroup.remove();
             }
 
-            if (series.shapes === null || series.shapes === undefined) {
-                theseShapes = series._group.selectAll("." + className).data(lineData);
+            if (!series.shapes) {
+                theseShapes = series._group.selectAll("." + className).data(lineData, function (d) { return d.key; });
             } else {
                 theseShapes = series.shapes.data(lineData, function (d) { return d.key; });
             }
 
             // Add
-            theseShapes
+            entered = theseShapes
                 .enter()
                 .append("path")
                 .attr("id", function (d) { return dimple._createClass([d.key]); })
@@ -197,10 +199,10 @@
                 .attr("d", function (d) {
                     return d.entry;
                 })
-                .call(function () {
+                .call(function (context) {
                     // Apply formats optionally
                     if (!chart.noFormats) {
-                        this.attr("opacity", function (d) { return (graded ? 1 : d.color.opacity); })
+                        context.attr("opacity", function (d) { return (graded ? 1 : d.color.opacity); })
                             .style("fill", "none")
                             .style("stroke", function (d) { return (graded ? "url(#" + dimple._createClass(["fill-line-gradient-" + d.keyString]) + ")" : d.color.stroke); })
                             .style("stroke-width", series.lineWeight);
@@ -213,7 +215,7 @@
                 });
 
             // Update
-            updated = chart._handleTransition(theseShapes, duration, chart)
+            updated = chart._handleTransition(theseShapes.merge(entered), duration, chart)
                 .attr("d", function (d) { return d.update; })
                 .each(function (d) {
                     // Pass line data to markers
@@ -234,8 +236,7 @@
             dimple._postDrawHandling(series, updated, removed, duration);
 
             // Save the shapes to the series array
-            series.shapes = theseShapes;
+            series.shapes = series._group.selectAll("." + className);
 
         }
     };
-

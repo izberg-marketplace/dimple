@@ -50,9 +50,9 @@
             })
             .attr("r", 0)
             .attr("opacity", (series.lineMarkers || lineDataRow.data.length < 2 ? lineDataRow.color.opacity : 0))
-            .call(function () {
+            .call(function (context) {
                 if (!chart.noFormats) {
-                    this.attr("fill", "white")
+                    context.attr("fill", "white")
                         .style("stroke-width", series.lineWeight)
                         .attr("stroke", function (d) {
                             return (useGradient ? dimple._helpers.fill(d, chart, series) : lineDataRow.color.stroke);
@@ -61,14 +61,14 @@
             });
 
         // Update
-        chart._handleTransition(markers, duration, chart)
+        chart._handleTransition(markers.merge(shapes), duration, chart)
             .attr("cx", function (d) { return dimple._helpers.cx(d, chart, series); })
             .attr("cy", function (d) { return dimple._helpers.cy(d, chart, series); })
             .attr("r", 2 + series.lineWeight)
             .attr("opacity", (series.lineMarkers || lineDataRow.data.length < 2 ? lineDataRow.color.opacity : 0))
-            .call(function () {
+            .call(function (context) {
                 if (!chart.noFormats) {
-                    this.attr("fill", "white")
+                    context.attr("fill", "white")
                         .style("stroke-width", series.lineWeight)
                         .attr("stroke", function (d) {
                             return (useGradient ? dimple._helpers.fill(d, chart, series) : lineDataRow.color.stroke);

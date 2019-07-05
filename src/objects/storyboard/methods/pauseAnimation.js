@@ -7,4 +7,3 @@
                 this._animationTimer = null;
             }
         };
-

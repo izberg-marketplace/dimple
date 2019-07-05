@@ -183,12 +183,12 @@
                 dp;
             if (this.tickFormat !== null && this.tickFormat !== undefined) {
                 if (this._hasTimeField()) {
-                    returnFormat = d3.time.format(this.tickFormat);
+                    returnFormat = d3.timeFormat(this.tickFormat);
                 } else {
                     returnFormat = d3.format(this.tickFormat);
                 }
             } else if (this.showPercent) {
-                returnFormat = d3.format("%");
+                returnFormat = d3.format(".0%");
             } else if (this.useLog && this.measure !== null) {
                 // With linear axes the range is used to apply uniform
                 // formatting but with a log axis it is based on each number
@@ -212,7 +212,7 @@
                         return (n === 0 ? 0 : d3.format(",." + dp + "f")(n / Math.pow(1000, chunks)) + suffix);
                     };
                 } else {
-                    dp = -Math.floor(Math.log(this._tick_step) / Math.LN10);
+                    dp = Math.max(-(this._tick_step ? Math.floor(Math.log(this._tick_step) / Math.LN10) : 0), 0);
                     returnFormat = d3.format(",." + dp + "f");
                 }
             } else {
@@ -234,25 +234,24 @@
                 // which in the case of seconds kills the browser.  All constants are straight sums of milliseconds
                 // except months taken as (86400000 * 365.25) / 12 = 2629800000
                 if (diff / 1000 <= maxPeriods) {
-                    outPeriod = d3.time.seconds;
+                    outPeriod = d3.timeSecond;
                 } else if (diff / 60000 <= maxPeriods) {
-                    outPeriod = d3.time.minutes;
+                    outPeriod = d3.timeMinute;
                 } else if (diff / 3600000 <= maxPeriods) {
-                    outPeriod = d3.time.hours;
+                    outPeriod = d3.timeHour;
                 } else if (diff / 86400000 <= maxPeriods) {
-                    outPeriod = d3.time.days;
+                    outPeriod = d3.timeHay;
                 } else if (diff / 604800000 <= maxPeriods) {
-                    outPeriod = d3.time.weeks;
+                    outPeriod = d3.timeWeek;
                 } else if (diff / 2629800000 <= maxPeriods) {
-                    outPeriod = d3.time.months;
+                    outPeriod = d3.timeMonth;
                 } else {
-                    outPeriod = d3.time.years;
+                    outPeriod = d3.timeYear;
                 }
             }
             // Return the date
             return outPeriod;
         };
-
 
         // Copyright: 2015 AlignAlytics
         // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
@@ -279,7 +278,7 @@
                     rows.push(this.measure + ": " + this._getFormat()(d.height));
                     break;
                 case "p":
-                    rows.push(this.measure + ": " + this._getFormat()(d.angle) + " (" + (d3.format("%")(d.piePct)) + ")");
+                    rows.push(this.measure + ": " + this._getFormat()(d.angle) + " (" + (d3.format(".0%")(d.piePct)) + ")");
                     break;
                 default:
                     rows.push(this.measure + ": " + this._getFormat()(d[this.position + "Value"]));
@@ -287,6 +286,7 @@
                 }
             }
         };
+
         // Copyright: 2015 AlignAlytics
         // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
         // Source: /src/objects/axis/methods/_getTopMaster.js
@@ -341,12 +341,11 @@
                     outDate = Date.parse(inDate);
                 }
             } else {
-                outDate = d3.time.format(this.dateParseFormat).parse(inDate);
+                outDate = d3.timeParse(this.dateParseFormat)(inDate);
             }
             // Return the date
             return outDate;
         };
-
 
         // Copyright: 2015 AlignAlytics
         // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
@@ -401,13 +400,13 @@
             // If this is an x axis
             if (this.position === "x" && (this._scale === null || refactor)) {
                 if (this._hasTimeField()) {
-                    this._scale = d3.time.scale()
+                    this._scale = d3.scaleTime()
                         // Previously used rangeRound which causes problems with the area chart (Issue #79)
                         .range([this.chart._xPixels(), this.chart._xPixels() + this.chart._widthPixels()])
                         .domain([this._min, this._max])
                         .clamp(this.clamp);
                 } else if (this.useLog) {
-                    this._scale = d3.scale.log()
+                    this._scale = d3.scaleLog()
                         .range([this.chart._xPixels(), this.chart._xPixels() + this.chart._widthPixels()])
                         .domain([
                             (this._min === 0 ? Math.pow(this.logBase, -1) : this._min),
@@ -424,11 +423,11 @@
                             distinctCats = distinctCats.concat(getOrderedCategories(slave, "x", "y"));
                         }, this);
                     }
-                    this._scale = d3.scale.ordinal()
-                        .rangePoints([this.chart._xPixels(), this.chart._xPixels() + this.chart._widthPixels()])
+                    this._scale = d3.scalePoint()
+                        .range([this.chart._xPixels(), this.chart._xPixels() + this.chart._widthPixels()])
                         .domain(distinctCats.concat([""]));
                 } else {
-                    this._scale = d3.scale.linear()
+                    this._scale = d3.scaleLinear()
                         .range([this.chart._xPixels(), this.chart._xPixels() + this.chart._widthPixels()])
                         .domain([this._min, this._max])
                         .clamp(this.clamp)
@@ -438,16 +437,14 @@
                 if (!this.hidden) {
                     switch (this.chart._axisIndex(this, "x")) {
                     case 0:
-                        this._draw = d3.svg.axis()
-                            .orient("bottom")
+                        this._draw = d3.axisBottom()
                             .scale(this._scale);
                         if (this.ticks) {
                             this._draw.ticks(tickCount);
                         }
                         break;
                     case 1:
-                        this._draw = d3.svg.axis()
-                            .orient("top")
+                        this._draw = d3.axisTop()
                             .scale(this._scale);
                         if (this.ticks) {
                             this._draw.ticks(tickCount);
@@ -459,13 +456,13 @@
                 }
             } else if (this.position === "y" && (this._scale === null || refactor)) {
                 if (this._hasTimeField()) {
-                    this._scale = d3.time.scale()
+                    this._scale = d3.scaleTime()
                         // Previously used rangeRound which causes problems with the area chart (Issue #79)
                         .range([this.chart._yPixels() + this.chart._heightPixels(), this.chart._yPixels()])
                         .domain([this._min, this._max])
                         .clamp(this.clamp);
                 } else if (this.useLog) {
-                    this._scale = d3.scale.log()
+                    this._scale = d3.scaleLog()
                         .range([this.chart._yPixels() + this.chart._heightPixels(), this.chart._yPixels()])
                         .domain([
                             (this._min === 0 ? Math.pow(this.logBase, -1) : this._min),
@@ -482,11 +479,11 @@
                             distinctCats = distinctCats.concat(getOrderedCategories(slave, "y", "x"));
                         }, this);
                     }
-                    this._scale = d3.scale.ordinal()
-                        .rangePoints([this.chart._yPixels() + this.chart._heightPixels(), this.chart._yPixels()])
+                    this._scale = d3.scalePoint()
+                        .range([this.chart._yPixels() + this.chart._heightPixels(), this.chart._yPixels()])
                         .domain(distinctCats.concat([""]));
                 } else {
-                    this._scale = d3.scale.linear()
+                    this._scale = d3.scaleLinear()
                         .range([this.chart._yPixels() + this.chart._heightPixels(), this.chart._yPixels()])
                         .domain([this._min, this._max])
                         .clamp(this.clamp)
@@ -496,16 +493,14 @@
                 if (!this.hidden) {
                     switch (this.chart._axisIndex(this, "y")) {
                     case 0:
-                        this._draw = d3.svg.axis()
-                            .orient("left")
+                        this._draw = d3.axisLeft()
                             .scale(this._scale);
                         if (this.ticks) {
                             this._draw.ticks(tickCount);
                         }
                         break;
                     case 1:
-                        this._draw = d3.svg.axis()
-                            .orient("right")
+                        this._draw = d3.axisRight()
                             .scale(this._scale);
                         if (this.ticks) {
                             this._draw.ticks(tickCount);
@@ -517,7 +512,7 @@
                 }
             } else if (this.position.length > 0 && this.position[0] === "z" && this._scale === null) {
                 if (this.useLog) {
-                    this._scale = d3.scale.log()
+                    this._scale = d3.scaleLog()
                         .range([this.chart._heightPixels() / 300, this.chart._heightPixels() / 10])
                         .domain([
                             (this._min === 0 ? Math.pow(this.logBase, -1) : this._min),
@@ -526,14 +521,14 @@
                         .clamp(this.clamp)
                         .base(this.logBase);
                 } else {
-                    this._scale = d3.scale.linear()
+                    this._scale = d3.scaleLinear()
                         .range([1, this.chart._heightPixels() / 10])
                         .domain([this._min, this._max])
                         .clamp(this.clamp);
                 }
             } else if (this.position.length > 0 && this.position[0] === "p" && this._scale === null) {
                 if (this.useLog) {
-                    this._scale = d3.scale.log()
+                    this._scale = d3.scaleLog()
                         .range([0, 360])
                         .domain([
                             (this._min === 0 ? Math.pow(this.logBase, -1) : this._min),
@@ -542,13 +537,13 @@
                         .clamp(this.clamp)
                         .base(this.logBase);
                 } else {
-                    this._scale = d3.scale.linear()
+                    this._scale = d3.scaleLinear()
                         .range([0, 360])
                         .domain([this._min, this._max])
                         .clamp(this.clamp);
                 }
             } else if (this.position.length > 0 && this.position[0] === "c" && this._scale === null) {
-                this._scale = d3.scale.linear()
+                this._scale = d3.scaleLinear()
                     .range([0, (this.colors === null || this.colors.length === 1 ? 1 : this.colors.length - 1)])
                     .domain([this._min, this._max])
                     .clamp(this.clamp);
@@ -603,7 +598,6 @@
             return this;
         };
 
-
         // Copyright: 2015 AlignAlytics
         // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
         // Source: /src/objects/axis/methods/addGroupOrderRule.js
@@ -655,9 +649,11 @@
         // Help: http://github.com/PMSI-AlignAlytics/dimple/wiki/dimple.chart#wiki-shapes
         this.shapes = null;
         // Help: http://github.com/PMSI-AlignAlytics/dimple/wiki/dimple.chart#wiki-ease
-        this.ease = "cubic-in-out";
+        this.ease = d3.easeCubicInOut;
         // Help: http://github.com/PMSI-AlignAlytics/dimple/wiki/dimple.chart#wiki-staggerDraw
         this.staggerDraw = false;
+        // Help: http://github.com/PMSI-AlignAlytics/dimple/wiki/dimple.chart#wiki-transition
+        this.transition = {};
 
         // The group within which to put all of this chart's objects
         this._group = svg.append("g");
@@ -826,7 +822,7 @@
                 var returnValue = 0,
                     categories,
                     comp,
-                    p,
+                    i,
                     q,
                     aMatch,
                     bMatch;
@@ -845,22 +841,22 @@
                 if (seriesCat && seriesCat.length > 0 && returnValue === 0) {
                     categories = [].concat(seriesCat);
                     returnValue = 0;
-                    for (p = 0; p < orderedSeriesArray.length; p += 1) {
-                        comp = [].concat(orderedSeriesArray[p]);
+                    for (i = 0; i < orderedSeriesArray.length; i += 1) {
+                        comp = [].concat(orderedSeriesArray[i]);
                         aMatch = true;
                         bMatch = true;
                         for (q = 0; q < categories.length; q += 1) {
                             aMatch = aMatch && (a[categories[q]] === comp[q]);
                             bMatch = bMatch && (b[categories[q]] === comp[q]);
                         }
-                        if (aMatch && bMatch) {
-                            returnValue = 0;
-                            break;
-                        } else if (aMatch) {
-                            returnValue = -1;
-                            break;
-                        } else if (bMatch) {
-                            returnValue = 1;
+                        if (aMatch || bMatch) {
+                            if (aMatch && bMatch) {
+                                returnValue = 0;
+                            } else if (aMatch) {
+                                returnValue = -1;
+                            } else {
+                                returnValue = 1;
+                            }
                             break;
                         }
                     }
@@ -878,7 +874,7 @@
                     pField = getField(p, d),
                 // Get the aggregate field using the other fields if necessary
                     aggField = [],
-                    key,
+                    ky,
                     k,
                     i,
                     newRow,
@@ -900,11 +896,11 @@
                     }
                 }
 
-                // Add a key
-                key = aggField.join("/") + "_" + xField.join("/") + "_" + yField.join("/") + "_" + pField.join("/") + "_" + zField.join("/");
+                // Add a ky
+                ky = aggField.join("/") + "_" + xField.join("/") + "_" + yField.join("/") + "_" + pField.join("/") + "_" + zField.join("/");
                 // See if this field has already been added.
                 for (k = 0; k < returnData.length; k += 1) {
-                    if (returnData[k].key === key) {
+                    if (returnData[k].key === ky) {
                         foundIndex = k;
                         break;
                     }
@@ -912,7 +908,7 @@
                 // If the field was not added, do so here
                 if (foundIndex === -1) {
                     newRow = {
-                        key: key,
+                        key: ky,
                         aggField: aggField,
                         xField: xField,
                         xValue: null,
@@ -1118,7 +1114,7 @@
                     colorBounds.max = (c.overrideMax || colorBounds.max);
                     ret.cValue = (ret.cValue > colorBounds.max ? colorBounds.max : (ret.cValue < colorBounds.min ? colorBounds.min : ret.cValue));
                     // Calculate the factors for the calculations
-                    scale = d3.scale.linear().range([0, (c.colors === null || c.colors.length === 1 ? 1 : c.colors.length - 1)]).domain([colorBounds.min, colorBounds.max]);
+                    scale = d3.scaleLinear().range([0, (c.colors === null || c.colors.length === 1 ? 1 : c.colors.length - 1)]).domain([colorBounds.min, colorBounds.max]);
                     colorVal = scale(ret.cValue);
                     floatingPortion = colorVal - Math.floor(colorVal);
                     if (ret.cValue === colorBounds.max) {
@@ -1181,9 +1177,9 @@
                 this.series.forEach(function (series) {
 
                     // The data for this series
-                    var data = series.data || this.data || [],
+                    var seriesData = series.data || this.data || [],
                         cats = [].concat(series.categoryFields || "All"),
-                        returnData = this._getData(data, cats, series.aggregate, series._orderRules, series._isStacked(), series.x, series.y, series.z, series.p, series.c),
+                        returnData = this._getData(seriesData, cats, series.aggregate, series._orderRules, series._isStacked(), series.x, series.y, series.z, series.p, series.c),
                         higherLevelData = [],
                         i,
                         j,
@@ -1206,7 +1202,7 @@
                     if (series.p && cats.length > 0) {
                         if (series.x && series.y) {
                             cats.pop();
-                            higherLevelData = this._getData(data, ["__dimple_placeholder__"].concat(cats), series.aggregate, series._orderRules, series._isStacked(), series.x, series.y, series.z, series.p, series.c);
+                            higherLevelData = this._getData(seriesData, ["__dimple_placeholder__"].concat(cats), series.aggregate, series._orderRules, series._isStacked(), series.x, series.y, series.z, series.p, series.c);
                             for (i = 0; i < returnData.length; i += 1) {
                                 aCats = ["__dimple_placeholder__"].concat(returnData[i].aggField);
                                 aCats.pop();
@@ -1308,7 +1304,6 @@
             }
         };
 
-
           // Copyright: 2015 AlignAlytics
         // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
         // Source: /src/chart/methods/_handleTransition.js
@@ -1319,8 +1314,8 @@
             } else {
                 returnShape = input.transition()
                     .duration(duration)
-                    .delay(chart._getDelay(duration, chart, series))
-                    .ease(chart.ease);
+                    .delay(chart._getDelay(duration, chart, series));
+                dimple._ease(returnShape, chart.ease);
             }
             return returnShape;
         };
@@ -1402,7 +1397,8 @@
         this.addAxis  = function (position, categoryFields, measure, timeField) {
             // The axis to return
             var axis = null,
-                master = null;
+                master = null,
+                err;
             // Convert the passed category fields to an array in case a single string is sent
             if (categoryFields !== null && categoryFields !== undefined) {
                 categoryFields = [].concat(categoryFields);
@@ -1434,11 +1430,14 @@
                 );
                 // Validate that the master and child axes are compatible
                 if (axis._hasMeasure() !== master._hasMeasure()) {
-                    throw "You have specified a composite axis where some but not all axes have a measure - this is not supported, all axes must be of the same type.";
+                    err = "You have specified a composite axis where some but not all axes have a measure - this is not supported, all axes must be of the same type.";
                 } else if (axis._hasTimeField() !== master._hasTimeField()) {
-                    throw "You have specified a composite axis where some but not all axes have a time field - this is not supported, all axes must be of the same type.";
+                    err = "You have specified a composite axis where some but not all axes have a time field - this is not supported, all axes must be of the same type.";
                 } else if ((axis.categoryFields === null || axis.categoryFields === undefined ? 0 : axis.categoryFields.length) !== (master.categoryFields === null || master.categoryFields === undefined ? 0 : master.categoryFields.length)) {
-                    throw "You have specified a composite axis where axes have differing numbers of category fields - this is not supported, all axes must be of the same type.";
+                    err = "You have specified a composite axis where axes have differing numbers of category fields - this is not supported, all axes must be of the same type.";
+                }
+                if (err) {
+                    throw err;
                 }
                 // Do not add the axis to the chart's axes array, instead add it the master
                 master._slaves.push(axis);
@@ -1446,7 +1445,6 @@
             // return the axis
             return axis;
         };
-
 
         // Copyright: 2015 AlignAlytics
         // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
@@ -1917,27 +1915,28 @@
                 // Set some initial css values
                 handleTrans(axis.shapes.selectAll("text"))
                     .attr("class", appendClass(chart.customClassList.axisLabel))
-                    .call(function() {
+                    .call(function (context) {
                         if (!chart.noFormats) {
-                            this.style("font-family", axis.fontFamily)
+                            context.style("font-family", axis.fontFamily)
                                 .style("font-size", axis._getFontSize());
                         }
                     });
                 handleTrans(axis.shapes.selectAll("path, line"))
                     .attr("class", appendClass(chart.customClassList.axisLine))
-                    .call(function() {
+                    .call(function (context) {
                         if (!chart.noFormats) {
-                            this.style("fill", "none")
+                            context.style("fill", "none")
                                 .style("stroke", "black")
                                 .style("shape-rendering", "crispEdges");
                         }
                     });
                 if (axis.gridlineShapes !== null) {
+                    axis.gridlineShapes.selectAll("path").remove();
                     handleTrans(axis.gridlineShapes.selectAll("line"))
                         .attr("class", appendClass(chart.customClassList.gridline))
-                        .call(function() {
+                        .call(function (context) {
                             if (!chart.noFormats) {
-                                this.style("fill", "none")
+                                context.style("fill", "none")
                                     .style("stroke", "lightgray")
                                     .style("opacity", 0.8);
                             }
@@ -1953,7 +1952,7 @@
                                 var w = this.getComputedTextLength();
                                 widest = (w > widest ? w : widest);
                             });
-                            if (widest > chartWidth / axis.shapes.selectAll("text")[0].length) {
+                            if (widest > chartWidth / axis.shapes.selectAll("text").nodes().length) {
                                 rotated = true;
                                 axis.shapes.selectAll("text")
                                     .style("text-anchor", "start")
@@ -1977,7 +1976,7 @@
                                     var w = this.getComputedTextLength();
                                     widest = (w > widest ? w : widest);
                                 });
-                            if (widest > chartWidth / axis.shapes.selectAll("text")[0].length) {
+                            if (widest > chartWidth / axis.shapes.selectAll("text").nodes().length) {
                                 rotated = true;
                                 axis.shapes.selectAll("text")
                                     .style("text-anchor", "end")
@@ -2333,12 +2332,12 @@
                 .attr("class", function (d) {
                     return "dimple-legend dimple-legend-text " + dimple._createClass(d.aggField) + " " + self.chart.customClassList.legendLabel;
                 })
-                .text(function(d) {
+                .text(function (d) {
                     return d.key;
                 })
-                .call(function () {
+                .call(function (context) {
                     if (!self.chart.noFormats) {
-                        this.style("font-family", self.fontFamily)
+                        context.style("font-family", self.fontFamily)
                             .style("font-size", self._getFontSize())
                             .style("shape-rendering", "crispEdges");
                     }
@@ -2393,9 +2392,9 @@
                             .attr("y", self._yPixels() + runningY)
                             .attr("height", keyHeight)
                             .attr("width",  keyWidth)
-                            .call(function() {
+                            .call(function (context) {
                                 if (!self.chart.noFormats) {
-                                    this.style("fill", d.fill)
+                                    context.style("fill", d.fill)
                                         .style("stroke", d.stroke)
                                         .style("opacity", d.opacity)
                                         .style("shape-rendering", "crispEdges");
@@ -2721,7 +2720,7 @@
         // Copyright: 2015 AlignAlytics
         // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
         // Source: /src/objects/series/methods/_dropLineOrigin.js
-        this._dropLineOrigin = function() {
+        this._dropLineOrigin = function () {
 
             // Get the origin co-ordinates for axis drop lines
             var xIndex = 0,
@@ -2800,7 +2799,7 @@
         // Copyright: 2015 AlignAlytics
         // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
         // Source: /src/objects/series/methods/_isStacked.js
-        this._isStacked = function() {
+        this._isStacked = function () {
             return this.stacked && (this.x._hasCategories() || this.y._hasCategories());
         };
         // Copyright: 2015 AlignAlytics
@@ -2910,37 +2909,35 @@
         // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
         // Source: /src/objects/storyboard/methods/drawText.js
         this._drawText = function () {
-            if (!this.storyLabel) {
-                var chart = this.chart,
-                    self = this,
-                    xCount = 0;
+            var self = this,
+                xCount = 0;
+            if (!self.storyLabel) {
                 // Check for a secondary x axis
-                this.chart.axes.forEach(function (a) {
+                self.chart.axes.forEach(function (a) {
                     if (a.position === "x") {
                         xCount += 1;
                     }
-                }, this);
-                this.storyLabel = this.chart._group.append("text")
+                }, self);
+                self.storyLabel = self.chart._group.append("text")
                     .attr("class", "dimple-storyboard-label")
                     .attr("opacity", 1)
-                    .attr("x", this.chart._xPixels() + this.chart._widthPixels() * 0.01)
-                    .attr("y", this.chart._yPixels() + (this.chart._heightPixels() / 35 > 10 ? this.chart._heightPixels() / 35 : 10) * (xCount > 1 ? 1.25 : -1))
-                    .call(function () {
+                    .attr("x", self.chart._xPixels() + self.chart._widthPixels() * 0.01)
+                    .attr("y", self.chart._yPixels() + (self.chart._heightPixels() / 35 > 10 ? self.chart._heightPixels() / 35 : 10) * (xCount > 1 ? 1.25 : -1))
+                    .call(function (context) {
                         if (!chart.noFormats) {
-                            this.style("font-family", self.fontFamily)
+                            context.style("font-family", self.fontFamily)
                                 .style("font-size", self._getFontSize());
                         }
                     });
             }
-            this.storyLabel
-                .text(this.categoryFields.join("\\") + ": " + this.getFrameValue());
+            self.storyLabel
+                .text(self.categoryFields.join("\\") + ": " + self.getFrameValue());
         };
-
 
         // Copyright: 2015 AlignAlytics
         // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
         // Source: /src/objects/storyboard/methods/_getCategories.js
-        this._getCategories = function() {
+        this._getCategories = function () {
             if (this._categoryFields !== this._cachedCategoryFields) {
                 // Clear the array
                 this._categories = [];
@@ -3035,7 +3032,6 @@
             }
         };
 
-
         // Copyright: 2015 AlignAlytics
         // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
         // Source: /src/objects/storyboard/methods/startAnimation.js
@@ -3054,7 +3050,6 @@
             }
         };
 
-
         // Copyright: 2015 AlignAlytics
         // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
         // Source: /src/objects/storyboard/methods/stopAnimation.js
@@ -3065,7 +3060,6 @@
                 this._frame = 0;
             }
         };
-
 
     };
     // End dimple.storyboard
@@ -3146,6 +3140,7 @@
                 key,
                 keyString,
                 rowIndex,
+                entered,
                 updated,
                 removed,
                 orderedSeriesArray,
@@ -3196,10 +3191,11 @@
                     return parseFloat(val);
                 },
                 getArea = function (inter, originProperty) {
-                    return d3.svg.line()
+                    var pt = d3.line()
                         .x(function (d) { return (series.x._hasCategories() || !originProperty ? d.x : series.x[originProperty]); })
-                        .y(function (d) { return (series.y._hasCategories() || !originProperty ? d.y : series.y[originProperty]); })
-                        .interpolate(inter);
+                        .y(function (d) { return (series.y._hasCategories() || !originProperty ? d.y : series.y[originProperty]); });
+                    dimple._interpolate(pt, inter);
+                    return pt;
                 },
                 sortByVal = function (a, b) {
                     return parseFloat(a) - parseFloat(b);
@@ -3209,17 +3205,17 @@
                 },
                 addNextPoint = function (source, target, startAngle) {
                     // Given a point we need to find the next point clockwise from the start angle
-                    var i,
+                    var q,
                         point = target[target.length - 1],
                         thisAngle,
                         bestAngleSoFar = 9999,
                         returnPoint = point;
-                    for (i = 0; i < source.length; i += 1) {
-                        if (source[i].x !== point.x || source[i].y !== point.y) {
+                    for (q = 0; q < source.length; q += 1) {
+                        if (source[q].x !== point.x || source[q].y !== point.y) {
                             // get the angle in degrees since start angle
-                            thisAngle = 180 - (Math.atan2(source[i].x - point.x, source[i].y - point.y) * (180 / Math.PI));
+                            thisAngle = 180 - (Math.atan2(source[q].x - point.x, source[q].y - point.y) * (180 / Math.PI));
                             if (thisAngle > startAngle && thisAngle < bestAngleSoFar) {
-                                returnPoint = source[i];
+                                returnPoint = source[q];
                                 bestAngleSoFar = thisAngle;
                             }
                         }
@@ -3449,27 +3445,27 @@
                 areaData[i].css = chart.getClass(areaData[i].key.length > 0 ? areaData[i].key[areaData[i].key.length - 1] : "All");
             }
 
-            if (chart._tooltipGroup !== null && chart._tooltipGroup !== undefined) {
+            if (chart._tooltipGroup) {
                 chart._tooltipGroup.remove();
             }
 
-            if (series.shapes === null || series.shapes === undefined) {
-                theseShapes = series._group.selectAll("." + className).data(areaData);
+            if (!series.shapes) {
+                theseShapes = series._group.selectAll("." + className).data(areaData, function (d) { return d.key; });
             } else {
                 theseShapes = series.shapes.data(areaData, function (d) { return d.key; });
             }
 
             // Add
-            theseShapes
+            entered = theseShapes
                 .enter()
                 .append("path")
                 .attr("id", function (d) { return dimple._createClass([d.key]); })
                 .attr("class", function (d) { return className + " dimple-line " + d.keyString + " " + chart.customClassList.areaSeries + " " + d.css; })
                 .attr("d", function (d) { return d.entry; })
-                .call(function () {
+                .call(function (context) {
                     // Apply formats optionally
                     if (!chart.noFormats) {
-                        this.attr("opacity", function (d) { return (graded ? 1 : d.color.opacity); })
+                        context.attr("opacity", function (d) { return (graded ? 1 : d.color.opacity); })
                             .style("fill", function (d) { return (graded ? "url(#" + dimple._createClass(["fill-area-gradient-" + d.keyString]) + ")" : d.color.fill); })
                             .style("stroke", function (d) { return (graded ? "url(#" + dimple._createClass(["stroke-area-gradient-" + d.keyString]) + ")" : d.color.stroke); })
                             .style("stroke-width", series.lineWeight);
@@ -3482,7 +3478,7 @@
                 });
 
             // Update
-            updated = chart._handleTransition(theseShapes, duration, chart)
+            updated = chart._handleTransition(theseShapes.merge(entered), duration, chart)
                 .attr("d", function (d) { return d.update; })
                 .each(function (d) {
                     // Pass line data to markers
@@ -3503,11 +3499,10 @@
             dimple._postDrawHandling(series, updated, removed, duration);
 
             // Save the shapes to the series array
-            series.shapes = theseShapes;
+            series.shapes = series._group.selectAll("." + className);
 
         }
     };
-
 
     // Copyright: 2015 AlignAlytics
     // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
@@ -3529,6 +3524,7 @@
             var chartData = series._positionData,
                 theseShapes = null,
                 classes = ["dimple-series-" + chart.series.indexOf(series), "dimple-bar"],
+                entered,
                 updated,
                 removed,
                 xFloat = !series._isStacked() && series.x._hasMeasure(),
@@ -3543,18 +3539,18 @@
                 cat = "y";
             }
 
-            if (chart._tooltipGroup !== null && chart._tooltipGroup !== undefined) {
+            if (chart._tooltipGroup) {
                 chart._tooltipGroup.remove();
             }
 
-            if (series.shapes === null || series.shapes === undefined) {
-                theseShapes = series._group.selectAll("." + classes.join(".")).data(chartData);
+            if (!series.shapes) {
+                theseShapes = series._group.selectAll("." + classes.join(".")).data(chartData, function (d) { return d.key; });
             } else {
                 theseShapes = series.shapes.data(chartData, function (d) { return d.key; });
             }
 
             // Add
-            theseShapes
+            entered = theseShapes
                 .enter()
                 .append("rect")
                 .attr("id", function (d) { return dimple._createClass([d.key]); })
@@ -3587,23 +3583,23 @@
                 .attr("height", function (d) { return (cat === "y" ?  dimple._helpers.height(d, chart, series) : 0); })
                 .on("mouseover", function (e) { dimple._showBarTooltip(e, this, chart, series); })
                 .on("mouseleave", function (e) { dimple._removeTooltip(e, this, chart, series); })
-                .call(function () {
+                .call(function (context) {
                     if (!chart.noFormats) {
-                        this.attr("opacity", function (d) { return dimple._helpers.opacity(d, chart, series); })
+                        context.attr("opacity", function (d) { return dimple._helpers.opacity(d, chart, series); })
                             .style("fill", function (d) { return dimple._helpers.fill(d, chart, series); })
                             .style("stroke", function (d) { return dimple._helpers.stroke(d, chart, series); });
                     }
                 });
 
             // Update
-            updated = chart._handleTransition(theseShapes, duration, chart, series)
+            updated = chart._handleTransition(theseShapes.merge(entered), duration, chart, series)
                 .attr("x", function (d) { return xFloat ? dimple._helpers.cx(d, chart, series) - series.x.floatingBarWidth / 2 : dimple._helpers.x(d, chart, series); })
                 .attr("y", function (d) { return yFloat ? dimple._helpers.cy(d, chart, series) - series.y.floatingBarWidth / 2 : dimple._helpers.y(d, chart, series); })
                 .attr("width", function (d) { return (xFloat ? series.x.floatingBarWidth : dimple._helpers.width(d, chart, series)); })
                 .attr("height", function (d) { return (yFloat ? series.y.floatingBarWidth : dimple._helpers.height(d, chart, series)); })
-                .call(function () {
+                .call(function (context) {
                     if (!chart.noFormats) {
-                        this.attr("fill", function (d) { return dimple._helpers.fill(d, chart, series); })
+                        context.attr("fill", function (d) { return dimple._helpers.fill(d, chart, series); })
                             .attr("stroke", function (d) { return dimple._helpers.stroke(d, chart, series); });
                     }
                 });
@@ -3634,10 +3630,9 @@
             dimple._postDrawHandling(series, updated, removed, duration);
 
             // Save the shapes to the series array
-            series.shapes = theseShapes;
+            series.shapes = series._group.selectAll("." + classes.join("."));
         }
     };
-
 
     // Copyright: 2015 AlignAlytics
     // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
@@ -3659,23 +3654,22 @@
             var chartData = series._positionData,
                 theseShapes = null,
                 classes = ["dimple-series-" + chart.series.indexOf(series), "dimple-bubble"],
+                entered,
                 updated,
                 removed;
 
-            if (chart._tooltipGroup !== null && chart._tooltipGroup !== undefined) {
+            if (chart._tooltipGroup) {
                 chart._tooltipGroup.remove();
             }
 
-            if (series.shapes === null || series.shapes === undefined) {
-                theseShapes = series._group.selectAll("." + classes.join(".")).data(chartData);
+            if (!series.shapes) {
+                theseShapes = series._group.selectAll("." + classes.join(".")).data(chartData, function (d) { return d.key; });
             } else {
-                theseShapes = series.shapes.data(chartData, function (d) {
-                    return d.key;
-                });
+                theseShapes = series.shapes.data(chartData, function (d) { return d.key; });
             }
 
             // Add
-            theseShapes
+            entered = theseShapes
                 .enter()
                 .append("circle")
                 .attr("id", function (d) { return dimple._createClass([d.key]); })
@@ -3692,22 +3686,22 @@
                 .attr("r", 0)
                 .on("mouseover", function (e) { dimple._showPointTooltip(e, this, chart, series); })
                 .on("mouseleave", function (e) { dimple._removeTooltip(e, this, chart, series); })
-                .call(function () {
+                .call(function (context) {
                     if (!chart.noFormats) {
-                        this.attr("opacity", function (d) { return dimple._helpers.opacity(d, chart, series); })
+                        context.attr("opacity", function (d) { return dimple._helpers.opacity(d, chart, series); })
                             .style("fill", function (d) { return dimple._helpers.fill(d, chart, series); })
                             .style("stroke", function (d) { return dimple._helpers.stroke(d, chart, series); });
                     }
                 });
 
             // Update
-            updated = chart._handleTransition(theseShapes, duration, chart, series)
+            updated = chart._handleTransition(theseShapes.merge(entered), duration, chart, series)
                 .attr("cx", function (d) { return dimple._helpers.cx(d, chart, series); })
                 .attr("cy", function (d) { return dimple._helpers.cy(d, chart, series); })
                 .attr("r", function (d) { return dimple._helpers.r(d, chart, series); })
-                .call(function () {
+                .call(function (context) {
                     if (!chart.noFormats) {
-                        this.attr("fill", function (d) { return dimple._helpers.fill(d, chart, series); })
+                        context.attr("fill", function (d) { return dimple._helpers.fill(d, chart, series); })
                             .attr("stroke", function (d) { return dimple._helpers.stroke(d, chart, series); });
                     }
                 });
@@ -3721,7 +3715,8 @@
             dimple._postDrawHandling(series, updated, removed, duration);
 
             // Save the shapes to the series array
-            series.shapes = theseShapes;
+            series.shapes = series._group.selectAll("." + classes.join("."));
+
         }
     };
 
@@ -3755,6 +3750,7 @@
                 key,
                 keyString,
                 rowIndex,
+                entered,
                 updated,
                 removed,
                 orderedSeriesArray,
@@ -3787,10 +3783,11 @@
                     return parseFloat(val.toFixed(1));
                 },
                 getLine = function (inter, originProperty) {
-                    return d3.svg.line()
+                    var pt = d3.line()
                         .x(function (d) { return (series.x._hasCategories() || !originProperty ? d.x : series.x[originProperty]); })
-                        .y(function (d) { return (series.y._hasCategories() || !originProperty ? d.y : series.y[originProperty]); })
-                        .interpolate(inter);
+                        .y(function (d) { return (series.y._hasCategories() || !originProperty ? d.y : series.y[originProperty]); });
+                    dimple._interpolate(pt, inter);
+                    return pt;
                 };
 
             // Handle the special interpolation handling for step
@@ -3903,18 +3900,18 @@
                 lineData[i].css = chart.getClass(lineData[i].key.length > 0 ? lineData[i].key[lineData[i].key.length - 1] : "All");
             }
 
-            if (chart._tooltipGroup !== null && chart._tooltipGroup !== undefined) {
+            if (chart._tooltipGroup) {
                 chart._tooltipGroup.remove();
             }
 
-            if (series.shapes === null || series.shapes === undefined) {
-                theseShapes = series._group.selectAll("." + className).data(lineData);
+            if (!series.shapes) {
+                theseShapes = series._group.selectAll("." + className).data(lineData, function (d) { return d.key; });
             } else {
                 theseShapes = series.shapes.data(lineData, function (d) { return d.key; });
             }
 
             // Add
-            theseShapes
+            entered = theseShapes
                 .enter()
                 .append("path")
                 .attr("id", function (d) { return dimple._createClass([d.key]); })
@@ -3924,10 +3921,10 @@
                 .attr("d", function (d) {
                     return d.entry;
                 })
-                .call(function () {
+                .call(function (context) {
                     // Apply formats optionally
                     if (!chart.noFormats) {
-                        this.attr("opacity", function (d) { return (graded ? 1 : d.color.opacity); })
+                        context.attr("opacity", function (d) { return (graded ? 1 : d.color.opacity); })
                             .style("fill", "none")
                             .style("stroke", function (d) { return (graded ? "url(#" + dimple._createClass(["fill-line-gradient-" + d.keyString]) + ")" : d.color.stroke); })
                             .style("stroke-width", series.lineWeight);
@@ -3940,7 +3937,7 @@
                 });
 
             // Update
-            updated = chart._handleTransition(theseShapes, duration, chart)
+            updated = chart._handleTransition(theseShapes.merge(entered), duration, chart)
                 .attr("d", function (d) { return d.update; })
                 .each(function (d) {
                     // Pass line data to markers
@@ -3961,11 +3958,10 @@
             dimple._postDrawHandling(series, updated, removed, duration);
 
             // Save the shapes to the series array
-            series.shapes = theseShapes;
+            series.shapes = series._group.selectAll("." + className);
 
         }
     };
-
 
     // Copyright: 2015 AlignAlytics
     // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
@@ -3984,6 +3980,7 @@
             var chartData = series._positionData,
                 theseShapes = null,
                 classes = ["dimple-series-" + chart.series.indexOf(series), "dimple-pie"],
+                entered,
                 updated,
                 removed,
                 getOuterBase = function (d) {
@@ -4013,7 +4010,7 @@
                     // Calculate the radii of the circles
                     var arc;
                     // The actual arc
-                    arc = d3.svg.arc()
+                    arc = d3.arc()
                         .innerRadius(getInnerRadius(d))
                         .outerRadius(getOuterRadius(d));
                     // Return the value
@@ -4025,11 +4022,11 @@
                     var i = d3.interpolate(this._current, a),
                         arc;
                     // The actual arc
-                    arc = d3.svg.arc()
+                    arc = d3.arc()
                         .innerRadius(function (d) { return d.innerRadius; })
                         .outerRadius(function (d) { return d.outerRadius; });
                     this._current = i(0);
-                    return function(t) {
+                    return function (t) {
                         return arc(i(t));
                     };
                 },
@@ -4057,18 +4054,18 @@
                 };
 
             // Clear tool tips
-            if (chart._tooltipGroup !== null && chart._tooltipGroup !== undefined) {
+            if (chart._tooltipGroup) {
                 chart._tooltipGroup.remove();
             }
 
-            if (series.shapes === null || series.shapes === undefined) {
-                theseShapes =  series._group.selectAll("." + classes.join(".")).data(chartData);
+            if (!series.shapes) {
+                theseShapes = series._group.selectAll("." + classes.join(".")).data(chartData, function (d) { return d.key; });
             } else {
                 theseShapes = series.shapes.data(chartData, function (d) { return d.key; });
             }
 
             // Add
-            theseShapes
+            entered = theseShapes
                 .enter()
                 .append("path")
                 .attr("id", function (d) { return dimple._createClass([d.key]); })
@@ -4081,9 +4078,9 @@
                 .attr("d", getArc)
                 .on("mouseover", function (e) { dimple._showBarTooltip(e, this, chart, series); })
                 .on("mouseleave", function (e) { dimple._removeTooltip(e, this, chart, series); })
-                .call(function () {
+                .call(function (context) {
                     if (!chart.noFormats) {
-                        this.attr("opacity", function (d) { return dimple._helpers.opacity(d, chart, series); })
+                        context.attr("opacity", function (d) { return dimple._helpers.opacity(d, chart, series); })
                             .style("fill", function (d) { return dimple._helpers.fill(d, chart, series); })
                             .style("stroke", function (d) { return dimple._helpers.stroke(d, chart, series); });
                     }
@@ -4096,15 +4093,15 @@
                 });
 
             // Update
-            updated = chart._handleTransition(theseShapes, duration, chart, series)
-                .call(function () {
+            updated = chart._handleTransition(theseShapes.merge(entered), duration, chart, series)
+                .call(function (context) {
                     if (duration && duration > 0) {
-                        this.attrTween("d", arcTween);
+                        context.attrTween("d", arcTween);
                     } else {
-                        this.attr("d", getArc);
+                        context.attr("d", getArc);
                     }
                     if (!chart.noFormats) {
-                        this.attr("fill", function (d) { return dimple._helpers.fill(d, chart, series); })
+                        context.attr("fill", function (d) { return dimple._helpers.fill(d, chart, series); })
                             .attr("stroke", function (d) { return dimple._helpers.stroke(d, chart, series); });
                     }
                 })
@@ -4118,9 +4115,11 @@
             dimple._postDrawHandling(series, updated, removed, duration);
 
             // Save the shapes to the series array
-            series.shapes = theseShapes;
+            series.shapes = series._group.selectAll("." + classes.join("."));
+
         }
     };
+
     // Copyright: 2015 AlignAlytics
     // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
     // Source: /src/methods/_addGradient.js
@@ -4169,15 +4168,15 @@
 
         if (transition) {
             chart._handleTransition(grad.selectAll("stop").data(colors), duration, chart)
-                .attr("offset", function(d) { return d.offset; })
-                .attr("stop-color", function(d) { return d.color; });
+                .attr("offset", function (d) { return d.offset; })
+                .attr("stop-color", function (d) { return d.color; });
         } else {
             grad.selectAll("stop")
                 .data(colors)
                 .enter()
                 .append("stop")
-                .attr("offset", function(d) { return d.offset; })
-                .attr("stop-color", function(d) { return d.color; });
+                .attr("offset", function (d) { return d.offset; })
+                .attr("stop-color", function (d) { return d.color; });
         }
     };
 
@@ -4203,14 +4202,14 @@
             for (q = 0; q < b.length; q += 1) {
                 bMatch = bMatch && (b[q] === rowArray[q]);
             }
-            if (aMatch && bMatch) {
-                returnValue = 0;
-                break;
-            } else if (aMatch) {
-                returnValue = -1;
-                break;
-            } else if (bMatch) {
-                returnValue = 1;
+            if (aMatch || bMatch) {
+                if (aMatch && bMatch) {
+                    returnValue = 0;
+                } else if (aMatch) {
+                    returnValue = -1;
+                } else {
+                    returnValue = 1;
+                }
                 break;
             }
         }
@@ -4225,7 +4224,7 @@
         var i,
             returnArray = [],
             replacer;
-        replacer = function(s) {
+        replacer = function (s) {
             var c = s.charCodeAt(0),
                 returnString = "-";
             if (c >= 65 && c <= 90) {
@@ -4286,7 +4285,7 @@
                 .attr("stroke", "none");
 
             // Update
-            chart._handleTransition(markerBacks, duration, chart)
+            chart._handleTransition(markerBacks.merge(shapes), duration, chart)
                 .attr("cx", function (d) { return dimple._helpers.cx(d, chart, series); })
                 .attr("cy", function (d) { return dimple._helpers.cy(d, chart, series); })
                 .attr("r", 2 + series.lineWeight);
@@ -4365,9 +4364,9 @@
             })
             .attr("r", 0)
             .attr("opacity", (series.lineMarkers || lineDataRow.data.length < 2 ? lineDataRow.color.opacity : 0))
-            .call(function () {
+            .call(function (context) {
                 if (!chart.noFormats) {
-                    this.attr("fill", "white")
+                    context.attr("fill", "white")
                         .style("stroke-width", series.lineWeight)
                         .attr("stroke", function (d) {
                             return (useGradient ? dimple._helpers.fill(d, chart, series) : lineDataRow.color.stroke);
@@ -4376,14 +4375,14 @@
             });
 
         // Update
-        chart._handleTransition(markers, duration, chart)
+        chart._handleTransition(markers.merge(shapes), duration, chart)
             .attr("cx", function (d) { return dimple._helpers.cx(d, chart, series); })
             .attr("cy", function (d) { return dimple._helpers.cy(d, chart, series); })
             .attr("r", 2 + series.lineWeight)
             .attr("opacity", (series.lineMarkers || lineDataRow.data.length < 2 ? lineDataRow.color.opacity : 0))
-            .call(function () {
+            .call(function (context) {
                 if (!chart.noFormats) {
-                    this.attr("fill", "white")
+                    context.attr("fill", "white")
                         .style("stroke-width", series.lineWeight)
                         .attr("stroke", function (d) {
                             return (useGradient ? dimple._helpers.fill(d, chart, series) : lineDataRow.color.stroke);
@@ -4414,6 +4413,50 @@
         // Insert the backings before the markers
         dimple._drawMarkerBacks(lineDataRow, chart, series, duration, className, lineShape);
 
+    };
+
+    // Copyright: 2015 AlignAlytics
+    // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
+    // Source: /src/methods/_ease.js
+    dimple._ease = function (shape, ease) {
+        if (shape && ease) {
+            // If interpolation is a string, use the conversion behaviour, otherwise apply it directly
+            if (Object.prototype.toString.call(ease) === "[object String]") {
+                switch (ease) {
+                case 'linear':
+                    ease = d3.easeLinear;
+                    break;
+                case 'poly':
+                    ease = d3.easePoly;
+                    break;
+                case 'quad':
+                    ease = d3.easeQuad;
+                    break;
+                case 'cubic':
+                    ease = d3.easeCubic;
+                    break;
+                case 'sin':
+                    ease = d3.easeSin;
+                    break;
+                case 'exp':
+                    ease = d3.easeExp;
+                    break;
+                case 'circle':
+                    ease = d3.easeCircle;
+                    break;
+                case 'elastic':
+                    ease = d3.easeElastic;
+                    break;
+                case 'back':
+                    ease = d3.easeBack;
+                    break;
+                case 'bounce':
+                    ease = d3.easeBounce;
+                    break;
+                }
+                shape.ease(ease);
+            }
+        }
     };
 
     // Copyright: 2015 AlignAlytics
@@ -4480,11 +4523,11 @@
                         var total = 0,
                             i;
                         for (i = 0; i < array.length; i += 1) {
-                            if (isNaN(array[i])) {
+                            if (!isNaN(array[i])) {
+                                total += parseFloat(array[i]);
+                            } else {
                                 total = undefined;
                                 break;
-                            } else {
-                                total += parseFloat(array[i]);
                             }
                         }
                         return total;
@@ -4584,7 +4627,6 @@
         // Return the ordered list
         return finalArray;
     };
-
 
     // Copyright: 2015 AlignAlytics
     // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
@@ -4811,6 +4853,59 @@
 
     // Copyright: 2015 AlignAlytics
     // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
+    // Source: /src/methods/_interpolate.js
+    dimple._interpolate = function (point, interpolation) {
+        if (point && interpolation) {
+            // If interpolation is a string, use the conversion behaviour, otherwise apply it directly
+            if (Object.prototype.toString.call(interpolation) === "[object String]") {
+                switch (interpolation) {
+                case 'linear':
+                    interpolation = d3.curveLinear;
+                    break;
+                case 'linear-closed':
+                    interpolation = d3.curveLinearClosed;
+                    break;
+                case 'step':
+                    interpolation = d3.curveStep;
+                    break;
+                case 'step-before':
+                    interpolation = d3.curveStepBefore;
+                    break;
+                case 'step-after':
+                    interpolation = d3.curveStepAfter;
+                    break;
+                case 'basis':
+                    interpolation = d3.curveBasis;
+                    break;
+                case 'basis-open':
+                    interpolation = d3.curveBasisOpen;
+                    break;
+                case 'basis-closed':
+                    interpolation = d3.curveBasisClosed;
+                    break;
+                case 'bundle':
+                    interpolation = d3.curveBundle;
+                    break;
+                case 'cardinal':
+                    interpolation = d3.curveCardinal;
+                    break;
+                case 'cardinal-open':
+                    interpolation = d3.curveCardinalOpen;
+                    break;
+                case 'cardinal-closed':
+                    interpolation = d3.curveCardinalClosed;
+                    break;
+                case 'monotone':
+                    interpolation = d3.curveMonotoneX;
+                    break;
+                }
+            }
+            point.curve(interpolation);
+        }
+    };
+
+    // Copyright: 2015 AlignAlytics
+    // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
     // Source: /src/methods/_parentHeight.js
     dimple._parentHeight = function (parent) {
         // Let's be explicit about what we are trying to get here
@@ -4886,22 +4981,25 @@
         // Run after transition methods
         if (duration === 0) {
             updated.each(function (d, i) {
-                if (series.afterDraw !== null && series.afterDraw !== undefined) {
+                if (series.afterDraw) {
                     series.afterDraw(this, d, i);
                 }
             });
             removed.remove();
         } else {
-            updated.each("end", function (d, i) {
-                if (series.afterDraw !== null && series.afterDraw !== undefined) {
+            updated.on("end", function (d, i) {
+                if (series.afterDraw) {
                     series.afterDraw(this, d, i);
                 }
             });
-            removed.each("end", function () {
-                d3.select(this).remove();
+            removed.call(function () {
+                if (series.shapes) {
+                    series.shapes.exit().remove();
+                }
             });
         }
     };
+
     // Copyright: 2015 AlignAlytics
     // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
     // Source: /src/methods/_removeTooltip.js
@@ -5044,10 +5142,10 @@
                     .attr("y1", (y < dropDest.y ? y + height : y))
                     .attr("x2", (x < series.x._origin ? x + offset : x + width - offset))
                     .attr("y2", (y < dropDest.y ? y + height : y))
-                    .call(function () {
+                    .call(function (context) {
                         // Apply formats optionally
                         if (!chart.noFormats) {
-                            this.style("fill", "none")
+                            context.style("fill", "none")
                                 .style("stroke", fill)
                                 .style("stroke-width", 2)
                                 .style("stroke-dasharray", ("3, 3"))
@@ -5057,7 +5155,7 @@
                     .transition()
                     .delay(animDuration / 2)
                     .duration(animDuration / 2)
-                    .ease("linear")
+                    .ease(d3.easeLinear)
                     // Added 1px offset to cater for svg issue where a transparent
                     // group overlapping a line can sometimes hide it in some browsers
                     // Issue #10
@@ -5074,10 +5172,10 @@
                     .attr("y1", (y < series.y._origin ? y + offset : y + height - offset))
                     .attr("x2", (x < dropDest.x ? x + width : x))
                     .attr("y2", (y < series.y._origin ? y + offset : y + height - offset))
-                    .call(function () {
+                    .call(function (context) {
                         // Apply formats optionally
                         if (!chart.noFormats) {
-                            this.style("fill", "none")
+                            context.style("fill", "none")
                                 .style("stroke", fill)
                                 .style("stroke-width", 2)
                                 .style("stroke-dasharray", ("3, 3"))
@@ -5087,7 +5185,7 @@
                     .transition()
                     .delay(animDuration / 2)
                     .duration(animDuration / 2)
-                    .ease("linear")
+                    .ease(d3.easeLinear)
                     // Added 1px offset to cater for svg issue where a transparent
                     // group overlapping a line can sometimes hide it in some browsers
                     // Issue #10
@@ -5107,10 +5205,10 @@
             .append("text")
             .attr("class", "dimple-tooltip " + chart.customClassList.tooltipLabel)
             .text(function (d) { return d; })
-            .call(function () {
+            .call(function (context) {
                 // Apply formats optionally
                 if (!chart.noFormats) {
-                    this.style("font-family", series.tooltipFontFamily)
+                    context.style("font-family", series.tooltipFontFamily)
                         .style("font-size", series._getTooltipFontSize());
                 }
             });
@@ -5139,10 +5237,10 @@
             .attr("width", w + 2 * textMargin)
             .attr("rx", 5)
             .attr("ry", 5)
-            .call(function () {
+            .call(function (context) {
                 // Apply formats optionally
                 if (!chart.noFormats) {
-                    this.style("fill", popupFillColor)
+                    context.style("fill", popupFillColor)
                         .style("stroke", popupStrokeColor)
                         .style("stroke-width", 2)
                         .style("opacity", 0.95);
@@ -5175,6 +5273,7 @@
         transformer = transformPoint(translateX, translateY);
         t.attr("transform", "translate(" + transformer.x + " , " + transformer.y + ")");
     };
+
     // Copyright: 2015 AlignAlytics
     // License: "https://github.com/PMSI-AlignAlytics/dimple/blob/master/MIT-LICENSE.txt"
     // Source: /src/methods/_showPointTooltip.js
@@ -5228,9 +5327,9 @@
             .attr("cx", cx)
             .attr("cy", cy)
             .attr("r", r)
-            .call(function () {
+            .call(function (context) {
                 if (!chart.noFormats) {
-                    this.attr("opacity", 0)
+                    context.attr("opacity", 0)
                         .style("fill", "none")
                         .style("stroke", fill)
                         .style("stroke-width", 1);
@@ -5238,11 +5337,11 @@
             })
             .transition()
             .duration(animDuration / 2)
-            .ease("linear")
+            .ease(d3.easeLinear)
             .attr("r", r + series.lineWeight + 2)
-            .call(function () {
+            .call(function (context) {
                 if (!chart.noFormats) {
-                    this.attr("opacity", 1)
+                    context.attr("opacity", 1)
                         .style("stroke-width", 2);
                 }
             });
@@ -5255,9 +5354,9 @@
                 .attr("y1", (cy < dropDest.y ? cy + r + series.lineWeight + 2 : cy - r - series.lineWeight - 2))
                 .attr("x2", cx)
                 .attr("y2", (cy < dropDest.y ? cy + r + series.lineWeight + 2 : cy - r - series.lineWeight - 2))
-                .call(function () {
+                .call(function (context) {
                     if (!chart.noFormats) {
-                        this.style("fill", "none")
+                        context.style("fill", "none")
                             .style("stroke", fill)
                             .style("stroke-width", 2)
                             .style("stroke-dasharray", ("3, 3"))
@@ -5267,7 +5366,7 @@
                 .transition()
                 .delay(animDuration / 2)
                 .duration(animDuration / 2)
-                .ease("linear")
+                .ease(d3.easeLinear)
                 // Added 1px offset to cater for svg issue where a transparent
                 // group overlapping a line can sometimes hide it in some browsers
                 // Issue #10
@@ -5282,9 +5381,9 @@
                 .attr("y1", cy)
                 .attr("x2", (cx < dropDest.x ? cx + r + series.lineWeight + 2 : cx - r - series.lineWeight - 2))
                 .attr("y2", cy)
-                .call(function () {
+                .call(function (context) {
                     if (!chart.noFormats) {
-                        this.style("fill", "none")
+                        context.style("fill", "none")
                             .style("stroke", fill)
                             .style("stroke-width", 2)
                             .style("stroke-dasharray", ("3, 3"))
@@ -5294,7 +5393,7 @@
                 .transition()
                 .delay(animDuration / 2)
                 .duration(animDuration / 2)
-                .ease("linear")
+                .ease(d3.easeLinear)
                 // Added 1px offset to cater for svg issue where a transparent
                 // group overlapping a line can sometimes hide it in some browsers
                 // Issue #10
@@ -5312,9 +5411,9 @@
             .append("text")
             .attr("class", "dimple-tooltip " + chart.customClassList.tooltipLabel)
             .text(function (d) { return d; })
-            .call(function () {
+            .call(function (context) {
                 if (!chart.noFormats) {
-                    this.style("font-family", series.tooltipFontFamily)
+                    context.style("font-family", series.tooltipFontFamily)
                         .style("font-size", series._getTooltipFontSize());
                 }
             });
@@ -5343,9 +5442,9 @@
             .attr("width", w + 2 * textMargin)
             .attr("rx", 5)
             .attr("ry", 5)
-            .call(function () {
+            .call(function (context) {
                 if (!chart.noFormats) {
-                    this.style("fill", popupFillColor)
+                    context.style("fill", popupFillColor)
                         .style("stroke", popupStrokeColor)
                         .style("stroke-width", 2)
                         .style("opacity", 0.95);
