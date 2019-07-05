@@ -15,4 +15,3 @@
                 }(this)), this.frameDuration);
             }
         };
-
